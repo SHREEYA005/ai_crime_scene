@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AI-Based Crime Scene Reconstruction
 
 A full-stack AI-powered forensic platform for crime scene analysis and 3D reconstruction.
@@ -25,3 +26,6 @@ Then open: http://localhost:5000/auth/login
 
 ## Project Structure
 See the engineering document for full details.
+=======
+# ai_crime_scene
+>>>>>>> 1ddd40f12eb9568070cc8f2a5ed0819cc9b85c4c
