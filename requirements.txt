@@ -1,0 +1,11 @@
+flask
+flask-login
+flask-sqlalchemy
+werkzeug
+python-dotenv
+ultralytics
+opencv-python-headless
+reportlab
+pillow
+psycopg2-binary
+pytest

@@ -1,0 +1,34 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+instance/
+.env
+uploads/
+exports/
+
+# Environment & secrets
+.env
+
+# Database
+instance/
+
+# Uploads & exports (don't commit crime scene photos)
+uploads/
+exports/
+
+# YOLO model weights (too large for GitHub)
+models/*.pt
+
+# Unity build outputs
+unity_project/Build/
+unity_project/Temp/
+unity_project/Library/
+unity_project/Logs/
+
+# OS
+.DS_Store
+Thumbs.db

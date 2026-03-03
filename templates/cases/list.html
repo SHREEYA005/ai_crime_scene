@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Cases{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>📁 Cases</h2>
+  <a href="/cases/new" class="btn btn-success">+ New Case</a>
+</div>
+
+{% if cases %}
+<div class="row">
+  {% for case in cases %}
+  <div class="col-md-6 mb-3">
+    <div class="card bg-secondary">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <h5 class="card-title">{{ case.case_number }}</h5>
+          <span class="badge bg-{{ 'success' if case.status == 'open' else 'dark' }}">{{ case.status }}</span>
+        </div>
+        <p class="card-text">{{ case.title }}</p>
+        <p class="text-muted small">📍 {{ case.location or 'Location not set' }}</p>
+        <p class="text-muted small">🗂 {{ case.evidence|length }} evidence files</p>
+        <a href="/cases/{{ case.id }}" class="btn btn-outline-light btn-sm">Open Case →</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted mt-5">
+  <p>No cases yet. Create your first case to get started.</p>
+  <a href="/cases/new" class="btn btn-success">+ Create Case</a>
+</div>
+{% endif %}
+{% endblock %}

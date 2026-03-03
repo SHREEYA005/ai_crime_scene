@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Annotate: {{ evidence.original_filename }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>✏️ Annotate: {{ evidence.original_filename }}</h4>
+  <a href="/cases/{{ evidence.case_id }}" class="btn btn-outline-secondary btn-sm">← Back to Case</a>
+</div>
+
+<div class="mb-2 d-flex gap-2 align-items-center flex-wrap">
+  <label>Label:</label>
+  <input type="text" id="label-input" value="bloodstain" class="form-control form-control-sm" style="width:180px" list="label-suggestions">
+  <datalist id="label-suggestions">
+    <option value="bloodstain"><option value="weapon"><option value="footprint">
+    <option value="shell_casing"><option value="knife"><option value="handgun">
+    <option value="evidence_marker"><option value="body">
+  </datalist>
+  <button class="btn btn-danger btn-sm" onclick="deleteSelected()">🗑 Delete Selected</button>
+  <button class="btn btn-success btn-sm" onclick="saveAnnotations()">💾 Save All</button>
+  <span id="status" class="text-muted small">Loading...</span>
+</div>
+
+<div class="mb-2">
+  <small class="text-muted">
+    🔴 Red = AI detected &nbsp;|&nbsp; 🟢 Green = Manual &nbsp;|&nbsp; 🟡 Yellow = Selected<br>
+    Click box to select. Drag on empty area to draw new box.
+  </small>
+</div>
+
+<canvas id="mainCanvas" style="border:2px solid #444; cursor:crosshair; max-width:100%;"></canvas>
+
+<div id="ann-list" class="mt-3"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const EVIDENCE_ID = {{ evidence.id }};
+let canvas = document.getElementById('mainCanvas');
+let ctx = canvas.getContext('2d');
+let img = new Image();
+let annotations = [];
+let selectedIndex = -1;
+let isDrawing = false;
+let drawStart = null;
+
+img.onload = function() {
+  canvas.width = Math.min(img.width, 900);
+  let scale = canvas.width / img.width;
+  canvas.height = img.height * scale;
+  loadAnnotations();
+};
+img.src = `/cases/evidence/${EVIDENCE_ID}/image`;
+
+function loadAnnotations() {
+  fetch(`/cases/evidence/${EVIDENCE_ID}/annotations`)
+    .then(r => r.json())
+    .then(data => {
+      annotations = data.annotations || [];
+      document.getElementById('status').textContent = `${annotations.length} annotations loaded`;
+      redraw(); updateList();
+    });
+}
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  let sx = canvas.width / img.width, sy = canvas.height / img.height;
+  annotations.forEach((ann, i) => {
+    let x = ann.x*img.width*sx, y = ann.y*img.height*sy;
+    let w = ann.width*img.width*sx, h = ann.height*img.height*sy;
+    let color = i===selectedIndex ? '#FFD700' : ann.source==='auto' ? '#FF4136' : '#2ECC40';
+    ctx.strokeStyle = color; ctx.lineWidth = i===selectedIndex ? 3 : 2;
+    ctx.strokeRect(x, y, w, h);
+    let label = ann.label + (ann.confidence ? ` ${Math.round(ann.confidence*100)}%` : '');
+    ctx.font = 'bold 13px Arial';
+    let tw = ctx.measureText(label).width;
+    ctx.fillStyle = color; ctx.fillRect(x, y-20, tw+6, 20);
+    ctx.fillStyle = '#000'; ctx.fillText(label, x+3, y-5);
+  });
+}
+
+function updateList() {
+  let list = document.getElementById('ann-list');
+  list.innerHTML = `<h6>Annotations (${annotations.length})</h6>`;
+  annotations.forEach((ann, i) => {
+    let d = document.createElement('div');
+    d.className = 'badge me-1 mb-1 p-2';
+    d.style.background = i===selectedIndex ? '#FFD700' : ann.source==='auto' ? '#dc3545' : '#28a745';
+    d.style.cursor = 'pointer';
+    d.textContent = `${i+1}. ${ann.label}${ann.confidence ? ' '+Math.round(ann.confidence*100)+'%' : ''}`;
+    d.onclick = () => { selectedIndex = i; redraw(); updateList(); };
+    list.appendChild(d);
+  });
+}
+
+canvas.addEventListener('mousedown', e => {
+  let r = canvas.getBoundingClientRect();
+  let mx = e.clientX-r.left, my = e.clientY-r.top;
+  let sx = canvas.width/img.width, sy = canvas.height/img.height;
+  let clicked = -1;
+  for (let i=annotations.length-1; i>=0; i--) {
+    let a=annotations[i], bx=a.x*img.width*sx, by=a.y*img.height*sy;
+    if (mx>=bx && mx<=bx+a.width*img.width*sx && my>=by && my<=by+a.height*img.height*sy) { clicked=i; break; }
+  }
+  if (clicked>=0) { selectedIndex=clicked; redraw(); updateList(); }
+  else { selectedIndex=-1; isDrawing=true; drawStart={x:mx,y:my}; }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!isDrawing) return;
+  let r = canvas.getBoundingClientRect();
+  let mx = e.clientX-r.left, my = e.clientY-r.top;
+  redraw();
+  ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.setLineDash([5,3]);
+  ctx.strokeRect(drawStart.x, drawStart.y, mx-drawStart.x, my-drawStart.y);
+  ctx.setLineDash([]);
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (!isDrawing) return;
+  isDrawing = false;
+  let r = canvas.getBoundingClientRect();
+  let mx = e.clientX-r.left, my = e.clientY-r.top;
+  let w = mx-drawStart.x, h = my-drawStart.y;
+  if (Math.abs(w)<10 || Math.abs(h)<10) return;
+  let sx = canvas.width/img.width, sy = canvas.height/img.height;
+  annotations.push({
+    label: document.getElementById('label-input').value || 'unknown',
+    x: Math.min(drawStart.x,mx)/(img.width*sx),
+    y: Math.min(drawStart.y,my)/(img.height*sy),
+    width: Math.abs(w)/(img.width*sx),
+    height: Math.abs(h)/(img.height*sy),
+    confidence: null, source: 'manual'
+  });
+  redraw(); updateList();
+});
+
+function deleteSelected() {
+  if (selectedIndex<0) { alert('Click on a box to select it first.'); return; }
+  annotations.splice(selectedIndex, 1);
+  selectedIndex=-1; redraw(); updateList();
+}
+
+function saveAnnotations() {
+  fetch(`/cases/evidence/${EVIDENCE_ID}/annotations`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({annotations})
+  }).then(r=>r.json()).then(data => {
+    document.getElementById('status').textContent = data.success
+      ? `✅ Saved ${data.saved} annotations!`
+      : `❌ Error: ${data.error}`;
+  });
+}
+</script>
+{% endblock %}

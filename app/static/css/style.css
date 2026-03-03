@@ -1,0 +1,4 @@
+body { min-height: 100vh; }
+.card { border: 1px solid #444; }
+canvas { display: block; }
+.navbar-brand { letter-spacing: 1px; }
