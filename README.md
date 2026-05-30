@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AI-Based Crime Scene Reconstruction
 
 A full-stack AI-powered forensic platform for crime scene analysis and 3D reconstruction.
