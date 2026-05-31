@@ -10,18 +10,10 @@ instance/
 uploads/
 exports/
 
-# Environment & secrets
-.env
-
-# Database
-instance/
-
-# Uploads & exports (don't commit crime scene photos)
-uploads/
-exports/
-
-# YOLO model weights (too large for GitHub)
-models/*.pt
+# Model weights (too large for GitHub)
+*.pt
+*.pth
+models/
 
 # Unity build outputs
 unity_project/Build/
