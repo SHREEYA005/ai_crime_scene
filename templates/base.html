@@ -5,38 +5,219 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Crime Scene AI{% endblock %}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+body { background:#1e2130; color:#e0e0e0; }
+
+    /* ── TOP NAVBAR ── */
+    .top-navbar {
+      height: 56px;
+      background: #252840;
+      border-bottom: 1px solid #363a5e;
+      position: fixed; top:0; left:0; right:0; z-index:1000;
+      display: flex; align-items: center;
+      padding: 0 1.5rem;
+      gap: 1rem;
+    }
+    .top-navbar .brand {
+      font-weight: 700; font-size: 1.1rem;
+      color: #8ba4ff; text-decoration: none;
+      white-space: nowrap;
+    }
+    .top-navbar .spacer { flex: 1; }
+    .top-navbar .user-info {
+      font-size: 0.85rem; color: #ccc;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 220px; min-height: calc(100vh - 56px);
+      background: #252840;
+      border-right: 1px solid #363a5e;
+      position: fixed; top: 56px; left: 0;
+      padding: 1.5rem 0;
+      display: flex; flex-direction: column;
+    }
+    .sidebar .nav-section {
+      font-size: 0.7rem; color: #7a7f9a;
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 0.5rem 1.5rem; margin-top: 0.5rem;
+    }
+    .sidebar .nav-link {
+      color: #c0c4d8; padding: 0.6rem 1.5rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      font-size: 0.9rem; border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .sidebar .nav-link:hover {
+      color: #fff; background: #2e3250;
+      border-left-color: #8ba4ff;
+    }
+    .sidebar .nav-link.active {
+      color: #8ba4ff; background: #2a2f55;
+      border-left-color: #8ba4ff;
+    }
+    .sidebar .nav-link i { font-size: 1rem; width: 18px; }
+
+    /* ── MAIN CONTENT ── */
+    .main-content {
+      margin-left: 220px;
+      margin-top: 56px;
+      padding: 2rem;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── STAT CARDS ── */
+    .stat-card {
+      background: #252840;
+      border: 1px solid #363a5e;
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: #8ba4ff; }
+    .stat-card .stat-number {
+      font-size: 2rem; font-weight: 700; color: #8ba4ff;
+    }
+    .stat-card .stat-label {
+      font-size: 0.85rem; color: #aaa; margin-top: 0.25rem;
+    }
+
+    /* ── EVIDENCE CARDS ── */
+    .evidence-card {
+      background: #252840 !important;
+      border: 1px solid #363a5e !important;
+      border-radius: 10px;
+      transition: border-color 0.2s;
+    }
+    .evidence-card:hover { border-color: #5a6aaa !important; }
+    .evidence-card .card-body { color: #e0e0e0 !important; }
+    .evidence-card p, .evidence-card span, .evidence-card small {
+      color: #e0e0e0;
+    }
+    .evidence-card .text-muted { color: #9a9fb8 !important; }
+
+    /* ── UPLOAD CARD ── */
+    .upload-card {
+      background: #252840;
+      border: 1px solid #363a5e;
+      border-radius: 10px;
+    }
+    .upload-card .card-body { color: #e0e0e0; }
+
+    /* ── FORM CONTROLS ── */
+    .form-control {
+      background: #1e2130;
+      border-color: #363a5e;
+      color: #e0e0e0;
+    }
+    .form-control:focus {
+      background: #1e2130;
+      border-color: #8ba4ff;
+      color: #e0e0e0;
+      box-shadow: 0 0 0 0.2rem rgba(139,164,255,0.15);
+    }
+    .form-control::placeholder { color: #6a6f88; }
+
+    /* ── ALERTS ── */
+    .alert { border-radius: 8px; border: none; }
+    .alert-success { background: #1a3a2a; color: #6ddba0; }
+    .alert-danger  { background: #3a1a1a; color: #e07070; }
+    .alert-warning { background: #3a2e1a; color: #e0c070; }
+
+    /* ── BADGES ── */
+    .badge.bg-secondary { background: #363a5e !important; color: #c0c4d8; }
+    .badge.bg-dark { background: #1a1d30 !important; color: #c0c4d8; }
+
+    /* ── BUTTONS ── */
+    .btn-outline-secondary {
+      border-color: #363a5e; color: #c0c4d8;
+    }
+    .btn-outline-secondary:hover {
+      background: #363a5e; color: #fff;
+    }
+
+    /* ── CASE CARDS ── */
+    .case-card {
+      background: #252840;
+      border: 1px solid #363a5e;
+      border-radius: 10px;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .case-card:hover {
+      border-color: #8ba4ff;
+      transform: translateY(-2px);
+    }
+    .case-card .card-body { color: #e0e0e0; }
+    .case-card .text-muted { color: #9a9fb8 !important; }
+  </style>
 </head>
-<body class="bg-dark text-light">
+<body>
 
-  <nav class="navbar navbar-dark bg-black border-bottom border-secondary">
-    <div class="container-fluid px-4">
-      <a class="navbar-brand fw-bold" href="/cases/">🔍 Crime Scene AI</a>
-      {% if current_user.is_authenticated %}
-      <div class="d-flex align-items-center gap-3">
-        <span class="text-secondary small">{{ current_user.username }}
-          <span class="badge bg-secondary">{{ current_user.role }}</span>
-        </span>
-        <a class="btn btn-outline-secondary btn-sm" href="/auth/logout">Logout</a>
-      </div>
-      {% endif %}
-    </div>
-  </nav>
-
-  <div class="container mt-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
+{% if current_user.is_authenticated %}
+<!-- ── TOP NAVBAR ── -->
+<div class="top-navbar">
+  <a class="brand" href="/dashboard">🔍 Crime Scene AI</a>
+  <div class="spacer"></div>
+  <div class="user-info">
+    <i class="bi bi-person-circle"></i>
+    <span>{{ current_user.username }}</span>
+    <span class="badge bg-secondary">{{ current_user.role }}</span>
+    <a href="/auth/logout" class="btn btn-outline-secondary btn-sm ms-2">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </a>
   </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  {% block scripts %}{% endblock %}
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+  <span class="nav-section">Main</span>
+  <a href="/dashboard" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">
+    <i class="bi bi-speedometer2"></i> Dashboard
+  </a>
+  <a href="/cases/" class="nav-link {% if '/cases' in request.path %}active{% endif %}">
+    <i class="bi bi-folder2-open"></i> Cases
+  </a>
+  <a href="/cases/new" class="nav-link">
+    <i class="bi bi-plus-circle"></i> New Case
+  </a>
+
+  <span class="nav-section" style="margin-top:1rem;">Tools</span>
+  <a href="#" class="nav-link">
+    <i class="bi bi-cpu"></i> AI Detection
+  </a>
+  <a href="#" class="nav-link">
+    <i class="bi bi-box"></i> 3D Viewer
+  </a>
+  <a href="#" class="nav-link">
+    <i class="bi bi-file-earmark-pdf"></i> Reports
+  </a>
+
+  <span class="nav-section" style="margin-top:1rem;">Account</span>
+  <a href="/auth/logout" class="nav-link">
+    <i class="bi bi-box-arrow-right"></i> Logout
+  </a>
+</div>
+
+{% endif %}
+
+<!-- ── MAIN CONTENT ── -->
+<div class="{% if current_user.is_authenticated %}main-content{% else %}container mt-5{% endif %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

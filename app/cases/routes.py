@@ -1,9 +1,9 @@
 import os, uuid
-from flask import render_template, redirect, url_for, request, flash, current_app
+from flask import render_template, redirect, url_for, request, flash, current_app, jsonify, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import db
-from app.models import Case, EvidenceItem
+from app.models import Case, EvidenceItem, Annotation
 from app.cases import cases_bp
 from datetime import date
 
@@ -79,4 +79,123 @@ def upload_evidence(case_id):
     db.session.commit()
 
     flash(f'{safe_name} uploaded successfully!', 'success')
+    return redirect(url_for('cases.view_case', case_id=case_id))
+
+
+# ── SPRINT 3: AI DETECTION ────────────────────────────────────────
+
+@cases_bp.route('/evidence/<int:evidence_id>/detect', methods=['POST'])
+@login_required
+def run_detection(evidence_id):
+    evidence = EvidenceItem.query.get_or_404(evidence_id)
+
+    if evidence.file_type not in ['jpg', 'jpeg', 'png']:
+        flash('Detection only works on image files', 'error')
+        return redirect(url_for('cases.view_case', case_id=evidence.case_id))
+
+    Annotation.query.filter_by(evidence_id=evidence_id, source='auto').delete(synchronize_session=False)
+
+    try:
+        from app.detection.yolo_detector import CrimeSceneDetector
+        detector = CrimeSceneDetector.get_instance()
+        detections = detector.detect(evidence.file_path)
+
+        for d in detections:
+            annotation = Annotation(
+                evidence_id=evidence_id,
+                label=d['label'],
+                x=d['x'], y=d['y'],
+                width=d['width'], height=d['height'],
+                confidence=d['confidence'],
+                source='auto',
+                annotated_by=current_user.id
+            )
+            db.session.add(annotation)
+
+        evidence.status = 'detected'
+        db.session.commit()
+        flash(f'Detection complete! Found {len(detections)} objects.', 'success')
+
+    except Exception as e:
+        flash(f'Detection failed: {str(e)}', 'error')
+
+    return redirect(url_for('cases.view_case', case_id=evidence.case_id))
+
+
+@cases_bp.route('/evidence/<int:evidence_id>/image')
+@login_required
+def serve_image(evidence_id):
+    evidence = EvidenceItem.query.get_or_404(evidence_id)
+    return send_file(evidence.file_path)
+
+
+# ── SPRINT 4: ANNOTATIONS API ─────────────────────────────────────
+
+@cases_bp.route('/evidence/<int:evidence_id>/annotations')
+@login_required
+def get_annotations(evidence_id):
+    evidence = EvidenceItem.query.get_or_404(evidence_id)
+    annotations = Annotation.query.filter_by(evidence_id=evidence_id).all()
+    data = [{
+        'id': a.id,
+        'label': a.label,
+        'x': a.x, 'y': a.y,
+        'width': a.width, 'height': a.height,
+        'confidence': a.confidence,
+        'source': a.source
+    } for a in annotations]
+    return jsonify({'annotations': data, 'count': len(data)})
+
+
+@cases_bp.route('/evidence/<int:evidence_id>/annotations', methods=['POST'])
+@login_required
+def save_annotations(evidence_id):
+    evidence = EvidenceItem.query.get_or_404(evidence_id)
+    data = request.get_json()
+
+    if not data or 'annotations' not in data:
+        return jsonify({'success': False, 'error': 'No annotation data sent'}), 400
+
+    Annotation.query.filter_by(evidence_id=evidence_id).delete(synchronize_session=False)
+
+    for ann in data['annotations']:
+        annotation = Annotation(
+            evidence_id=evidence_id,
+            label=ann['label'],
+            x=ann['x'], y=ann['y'],
+            width=ann['width'], height=ann['height'],
+            confidence=ann.get('confidence'),
+            source=ann.get('source', 'manual'),
+            annotated_by=current_user.id
+        )
+        db.session.add(annotation)
+
+    evidence.status = 'annotated'
+    db.session.commit()
+    return jsonify({'success': True, 'saved': len(data['annotations'])})
+
+
+@cases_bp.route('/evidence/<int:evidence_id>/annotate')
+@login_required
+def annotate(evidence_id):
+    evidence = EvidenceItem.query.get_or_404(evidence_id)
+    return render_template('cases/annotate.html', evidence=evidence)
+
+
+# ── DELETE EVIDENCE ───────────────────────────────────────────────
+
+@cases_bp.route('/evidence/<int:evidence_id>/delete', methods=['POST'])
+@login_required
+def delete_evidence(evidence_id):
+    evidence = EvidenceItem.query.get_or_404(evidence_id)
+    case_id = evidence.case_id
+
+    Annotation.query.filter_by(evidence_id=evidence_id).delete(synchronize_session=False)
+
+    if os.path.exists(evidence.file_path):
+        os.remove(evidence.file_path)
+
+    db.session.delete(evidence)
+    db.session.commit()
+    flash('Evidence file deleted.', 'success')
     return redirect(url_for('cases.view_case', case_id=case_id))

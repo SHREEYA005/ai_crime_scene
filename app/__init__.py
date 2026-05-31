@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from app.config import Config
@@ -20,14 +20,22 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(cases_bp)
 
+    @app.route('/')
+    def index():
+        return redirect(url_for('auth.dashboard'))
+
+    @app.route('/dashboard')
+    def dashboard_home():
+        return redirect(url_for('auth.dashboard'))
+
     @app.errorhandler(404)
     def not_found(e):
-        from flask import render_template
         return render_template('errors/404.html'), 404
 
     @app.errorhandler(500)
     def server_error(e):
-        from flask import render_template
         return render_template('errors/500.html'), 500
 
     return app
+
+from flask import render_template
