@@ -1,24 +1,87 @@
-{% extends 'base.html' %}
-{% block title %}Login — Crime Scene AI{% endblock %}
-{% block content %}
-<div class="row justify-content-center mt-5">
-  <div class="col-md-4">
-    <div class="card bg-secondary text-white">
-      <div class="card-body p-4">
-        <h3 class="card-title text-center mb-4">🔍 Crime Scene AI</h3>
-        <form method="POST">
-          <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input type="text" class="form-control" name="username" required autofocus>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Password</label>
-            <input type="password" class="form-control" name="password" required>
-          </div>
-          <button type="submit" class="btn btn-primary w-100">Login</button>
-        </form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login · CrimeScene.AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--red:#FF2D2D;--red-dim:rgba(255,45,45,0.12);--bg:#0A0A0C;--bg-1:#111114;--bg-2:#18181C;--border:rgba(255,255,255,0.06);--border-red:rgba(255,45,45,0.3);--text:#F0F0F2;--text-2:rgba(240,240,242,0.55);--text-3:rgba(240,240,242,0.28);--green:#00FF88}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-font-smoothing:antialiased}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:1}
+    .grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+    .glow{position:fixed;top:-20%;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(255,45,45,0.08) 0%,transparent 70%);pointer-events:none}
+    .wrap{position:relative;z-index:2;width:100%;max-width:400px;padding:24px}
+    .logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:40px}
+    .logo-icon{width:40px;height:40px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:white}
+    .logo-text{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;letter-spacing:0.06em}
+    .logo-text span{color:var(--red)}
+    .card{background:var(--bg-1);border:1px solid var(--border);border-radius:14px;padding:32px}
+    .card-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:6px}
+    .card-sub{font-size:13px;color:var(--text-2);margin-bottom:28px;font-weight:300}
+    .form-group{margin-bottom:16px}
+    .form-label{display:block;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.1em;color:var(--text-3);text-transform:uppercase;margin-bottom:7px}
+    .form-input{width:100%;background:var(--bg-2);border:1px solid var(--border);border-radius:7px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;font-weight:300;outline:none;transition:all 0.15s}
+    .form-input:hover{border-color:rgba(255,255,255,0.12)}
+    .form-input:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-dim)}
+    .form-input::placeholder{color:var(--text-3)}
+    .btn-login{width:100%;padding:12px;background:var(--red);color:white;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.04em;cursor:pointer;transition:all 0.15s;margin-top:8px}
+    .btn-login:hover{background:#ff4444;transform:translateY(-1px)}
+    .flash{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:20px;border:1px solid}
+    .flash.error{background:rgba(255,45,45,0.08);border-color:rgba(255,45,45,0.2);color:#FF6B6B}
+    .footer{margin-top:24px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;color:var(--text-3)}
+    .accounts{margin-top:20px;padding:14px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px}
+    .accounts-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:10px}
+    .account-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)}
+    .account-row:last-child{border-bottom:none}
+    .account-row .u{color:var(--text-2);font-family:'DM Mono',monospace}
+    .account-row .r{color:var(--text-3);font-size:11px}
+  </style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow"></div>
+<div class="wrap">
+  <div class="logo">
+    <div class="logo-icon">CS</div>
+    <span class="logo-text">CRIME<span>SCENE</span>.AI</span>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+    <div class="flash {{ 'error' if category == 'error' else 'success' }}">{{ message }}</div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="card">
+    <div class="card-title">Sign In</div>
+    <div class="card-sub">Access the forensic analysis platform</div>
+
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" type="text" name="username" placeholder="Enter username" required autofocus>
       </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" name="password" placeholder="Enter password" required>
+      </div>
+      <button type="submit" class="btn-login">Sign In →</button>
+    </form>
+
+    <div class="accounts" style="margin-top:20px">
+      <div class="accounts-title">Test Accounts</div>
+      <div class="account-row"><span class="u">admin / admin123</span><span class="r">Admin</span></div>
+      <div class="account-row"><span class="u">detective / detective123</span><span class="r">Investigator</span></div>
+      <div class="account-row"><span class="u">analyst / analyst123</span><span class="r">Analyst</span></div>
     </div>
   </div>
+
+  <div class="footer">AI-POWERED FORENSIC PLATFORM · v1.0</div>
 </div>
-{% endblock %}
+</body>
+</html>

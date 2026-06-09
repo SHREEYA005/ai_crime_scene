@@ -126,7 +126,8 @@ def run_detection(evidence_id):
 @login_required
 def serve_image(evidence_id):
     evidence = EvidenceItem.query.get_or_404(evidence_id)
-    return send_file(evidence.file_path)
+    path = os.path.join(os.getcwd(), evidence.file_path)
+    return send_file(path)
 
 
 # ── SPRINT 4: ANNOTATIONS API ─────────────────────────────────────
@@ -199,3 +200,64 @@ def delete_evidence(evidence_id):
     db.session.commit()
     flash('Evidence file deleted.', 'success')
     return redirect(url_for('cases.view_case', case_id=case_id))
+
+
+# ── SPRINT 5: SCENE EXPORT ────────────────────────────────────────
+
+@cases_bp.route('/<int:case_id>/export/scene', methods=['POST'])
+@login_required
+def export_scene(case_id):
+    case = Case.query.get_or_404(case_id)
+    output_path = os.path.join('exports', f'scene_{case.case_number}.json')
+    os.makedirs('exports', exist_ok=True)
+
+    try:
+        from app.detection.scene_builder import build_scene_json
+        scene = build_scene_json(case, output_path)
+        flash(f'Scene exported! {scene["total_objects"]} objects included.', 'success')
+    except Exception as e:
+        flash(f'Export failed: {str(e)}', 'error')
+
+    return redirect(url_for('cases.view_case', case_id=case_id))
+
+
+@cases_bp.route('/<int:case_id>/export/scene/download')
+@login_required
+def download_scene(case_id):
+    case = Case.query.get_or_404(case_id)
+    output_path = os.path.join(os.getcwd(), 'exports', f'scene_{case.case_number}.json')
+    if not os.path.exists(output_path):
+        flash('No scene export yet. Generate it first.', 'error')
+        return redirect(url_for('cases.view_case', case_id=case_id))
+    return send_file(output_path, as_attachment=True)
+
+
+# ── SPRINT 7: PDF REPORT ──────────────────────────────────────────
+
+@cases_bp.route('/<int:case_id>/export/pdf', methods=['POST'])
+@login_required
+def export_pdf(case_id):
+    case = Case.query.get_or_404(case_id)
+    output_path = os.path.join('exports', f'report_{case.case_number}.pdf')
+    os.makedirs('exports', exist_ok=True)
+
+    try:
+        from app.reports.pdf_generator import CaseReportGenerator
+        generator = CaseReportGenerator()
+        generator.generate(case, output_path)
+        flash('PDF report generated!', 'success')
+    except Exception as e:
+        flash(f'PDF generation failed: {str(e)}', 'error')
+
+    return redirect(url_for('cases.view_case', case_id=case_id))
+
+
+@cases_bp.route('/<int:case_id>/export/pdf/download')
+@login_required
+def download_pdf(case_id):
+    case = Case.query.get_or_404(case_id)
+    path = os.path.join(os.getcwd(), 'exports', f'report_{case.case_number}.pdf')
+    if not os.path.exists(path):
+        flash('Generate the report first', 'error')
+        return redirect(url_for('cases.view_case', case_id=case_id))
+    return send_file(path, as_attachment=True)

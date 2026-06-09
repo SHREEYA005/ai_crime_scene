@@ -1,97 +1,132 @@
-{% extends 'base.html' %}
-{% block title %}Dashboard{% endblock %}
+{% extends "base.html" %}
+{% block title %}Dashboard · CrimeScene.AI{% endblock %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h3 class="fw-bold mb-1">Dashboard</h3>
-    <p class="text-muted small mb-0">Welcome back, {{ current_user.username }} 👋</p>
-  </div>
-  <a href="/cases/new" class="btn btn-primary">
-    <i class="bi bi-plus-circle me-1"></i> New Case
-  </a>
-</div>
-
-<!-- ── STAT CARDS ── -->
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.total_cases }}</div>
-      <div class="stat-label"><i class="bi bi-folder2 me-1"></i>Total Cases</div>
+<div class="page-header">
+  <div class="page-eyebrow">Overview</div>
+  <div class="page-header-row">
+    <div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Welcome back, {{ current_user.username }}. Here's your forensic overview.</p>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.open_cases }}</div>
-      <div class="stat-label"><i class="bi bi-folder2-open me-1"></i>Open Cases</div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.total_evidence }}</div>
-      <div class="stat-label"><i class="bi bi-images me-1"></i>Evidence Files</div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="stat-card">
-      <div class="stat-number">{{ stats.total_detections }}</div>
-      <div class="stat-label"><i class="bi bi-cpu me-1"></i>AI Detections</div>
-    </div>
+    <a href="/cases/new" class="btn btn-primary">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+      New Case
+    </a>
   </div>
 </div>
 
-<!-- ── RECENT CASES ── -->
-<div class="row g-3">
-  <div class="col-md-7">
-    <div class="stat-card">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Cases</h6>
-        <a href="/cases/" class="btn btn-outline-secondary btn-sm">View All</a>
-      </div>
-      {% if recent_cases %}
-        {% for case in recent_cases %}
-        <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
-          <div>
-            <p class="mb-0 fw-semibold small">{{ case.case_number }}</p>
-            <p class="mb-0 text-muted" style="font-size:0.8rem;">{{ case.title }}</p>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-{{ 'success' if case.status == 'open' else 'dark' }}">{{ case.status }}</span>
-            <a href="/cases/{{ case.id }}" class="btn btn-outline-light btn-sm">Open →</a>
-          </div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <p class="text-muted small">No cases yet. <a href="/cases/new">Create your first case →</a></p>
-      {% endif %}
+<div class="stats-grid">
+  <div class="stat-card red">
+    <div class="stat-label">Total Cases</div>
+    <div class="stat-value">{{ cases|length if cases else 0 }}</div>
+    <div class="stat-sub">All time</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-label">Open Cases</div>
+    <div class="stat-value">{{ cases|selectattr('status','equalto','open')|list|length if cases else 0 }}</div>
+    <div class="stat-sub">Active investigations</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">Evidence Files</div>
+    <div class="stat-value">{{ total_evidence if total_evidence else 0 }}</div>
+    <div class="stat-sub">Uploaded items</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-label">AI Detections</div>
+    <div class="stat-value">{{ total_detections if total_detections else 0 }}</div>
+    <div class="stat-sub">Objects found</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
+  <!-- RECENT CASES -->
+  <div class="card" style="padding:0">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div class="card-title">Recent Cases</div>
+      <a href="/cases/" class="btn btn-ghost" style="padding:6px 12px;font-size:12px">View All</a>
     </div>
+    {% if cases %}
+    <div class="table-wrap" style="border:none;border-radius:0">
+      <table>
+        <thead>
+          <tr>
+            <th>Case Number</th>
+            <th>Title</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for case in cases[:8] %}
+          <tr>
+            <td><span class="mono text-red" style="font-size:12px">{{ case.case_number }}</span></td>
+            <td style="color:var(--text);font-weight:400">{{ case.title }}</td>
+            <td>{{ case.location or '—' }}</td>
+            <td>
+              {% if case.status == 'open' %}
+              <span class="badge badge-green">● Open</span>
+              {% elif case.status == 'closed' %}
+              <span class="badge badge-gray">Closed</span>
+              {% else %}
+              <span class="badge badge-amber">{{ case.status }}</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12px">{{ case.created_at.strftime('%d %b %Y') if case.created_at else '—' }}</td>
+            <td><a href="/cases/{{ case.id }}" class="btn btn-ghost" style="padding:5px 10px;font-size:12px">View →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+      </div>
+      <div class="empty-title">No cases yet</div>
+      <div class="empty-sub">Create your first case to start investigating</div>
+      <a href="/cases/new" class="btn btn-primary">Create First Case</a>
+    </div>
+    {% endif %}
   </div>
 
-  <div class="col-md-5">
-    <div class="stat-card">
-      <h6 class="mb-3"><i class="bi bi-lightning-charge me-2"></i>Quick Actions</h6>
-      <div class="d-grid gap-2">
-        <a href="/cases/new" class="btn btn-primary">
-          <i class="bi bi-plus-circle me-2"></i>Create New Case
+  <!-- QUICK ACTIONS + SYSTEM -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:14px">Quick Actions</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="/cases/new" class="btn btn-primary" style="justify-content:center">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+          Create New Case
         </a>
-        <a href="/cases/" class="btn btn-outline-light">
-          <i class="bi bi-folder2-open me-2"></i>View All Cases
+        <a href="/cases/" class="btn btn-ghost" style="justify-content:center">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+          View All Cases
         </a>
       </div>
+    </div>
 
-      <h6 class="mt-4 mb-3"><i class="bi bi-info-circle me-2"></i>System Info</h6>
-      <div class="d-flex flex-column gap-1">
-        <div class="d-flex justify-content-between">
-          <small class="text-muted">Model</small>
-          <small class="text-light">YOLOv8n</small>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:14px">System Info</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+          <span class="text-dimmer">AI Engine</span>
+          <span class="badge badge-green">YOLOv8n</span>
         </div>
-        <div class="d-flex justify-content-between">
-          <small class="text-muted">Database</small>
-          <small class="text-light">SQLite</small>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+          <span class="text-dimmer">Database</span>
+          <span class="badge badge-blue">SQLite</span>
         </div>
-        <div class="d-flex justify-content-between">
-          <small class="text-muted">Role</small>
-          <small class="text-light">{{ current_user.role }}</small>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+          <span class="text-dimmer">User Role</span>
+          <span class="badge badge-amber">{{ current_user.role }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+          <span class="text-dimmer">Session</span>
+          <span class="badge badge-green">● Active</span>
         </div>
       </div>
     </div>

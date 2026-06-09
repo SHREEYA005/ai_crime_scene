@@ -1,27 +1,48 @@
-{% extends 'base.html' %}
-{% block title %}New Case{% endblock %}
+{% extends "base.html" %}
+{% block title %}New Case · CrimeScene.AI{% endblock %}
 {% block content %}
-<h2 class="mb-4">📁 Create New Case</h2>
-<div class="row">
-  <div class="col-md-6">
-    <div class="card bg-secondary">
-      <div class="card-body">
-        <form method="POST">
-          <div class="mb-3">
-            <label class="form-label">Case Title *</label>
-            <input type="text" class="form-control" name="title" placeholder="e.g. Park Street Incident" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Location</label>
-            <input type="text" class="form-control" name="location" placeholder="e.g. 42 Park Street, Chennai">
-          </div>
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-success">Create Case</button>
-            <a href="/cases/" class="btn btn-outline-secondary">Cancel</a>
-          </div>
-        </form>
-      </div>
+
+<div class="page-header">
+  <div class="page-eyebrow">New Investigation</div>
+  <div class="page-header-row">
+    <div>
+      <h1 class="page-title">Create Case</h1>
+      <p class="page-subtitle">Start a new forensic investigation</p>
     </div>
+    <a href="/cases/" class="btn btn-ghost">← Back to Cases</a>
   </div>
 </div>
+
+<div style="max-width:560px">
+  <div class="card">
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Case Title</label>
+        <input class="form-input" type="text" name="title" placeholder="e.g. Downtown Robbery Investigation" required autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location</label>
+        <input class="form-input" type="text" name="location" placeholder="e.g. Mumbai, Maharashtra">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description (Optional)</label>
+        <textarea class="form-input" name="description" rows="3" placeholder="Brief description of the incident..."></textarea>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+          Create Case
+        </button>
+        <a href="/cases/" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <div style="margin-top:16px;padding:14px 16px;background:var(--bg-1);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-3);line-height:1.6">
+    <span class="mono" style="color:var(--red);margin-right:6px">NOTE</span>
+    A unique case number will be auto-generated. You can upload evidence photos and run AI detection after creating the case.
+  </div>
+</div>
+
 {% endblock %}

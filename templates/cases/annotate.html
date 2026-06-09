@@ -1,154 +1,241 @@
-{% extends 'base.html' %}
-{% block title %}Annotate: {{ evidence.original_filename }}{% endblock %}
+{% extends "base.html" %}
+{% block title %}Annotate · {{ evidence.original_filename }}{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4>✏️ Annotate: {{ evidence.original_filename }}</h4>
-  <a href="/cases/{{ evidence.case_id }}" class="btn btn-outline-secondary btn-sm">← Back to Case</a>
+
+<div class="page-header">
+  <div class="page-eyebrow">Annotation Canvas</div>
+  <div class="page-header-row">
+    <div>
+      <h1 class="page-title">{{ evidence.original_filename }}</h1>
+      <p class="page-subtitle">Click a box to select · Drag to draw new · WASD labels for forensic markers</p>
+    </div>
+    <a href="/cases/{{ evidence.case_id }}" class="btn btn-ghost">← Back to Case</a>
+  </div>
 </div>
 
-<div class="mb-2 d-flex gap-2 align-items-center flex-wrap">
-  <label>Label:</label>
-  <input type="text" id="label-input" value="bloodstain" class="form-control form-control-sm" style="width:180px" list="label-suggestions">
-  <datalist id="label-suggestions">
-    <option value="bloodstain"><option value="weapon"><option value="footprint">
-    <option value="shell_casing"><option value="knife"><option value="handgun">
-    <option value="evidence_marker"><option value="body">
-  </datalist>
-  <button class="btn btn-danger btn-sm" onclick="deleteSelected()">🗑 Delete Selected</button>
-  <button class="btn btn-success btn-sm" onclick="saveAnnotations()">💾 Save All</button>
-  <span id="status" class="text-muted small">Loading...</span>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:14px 18px;background:var(--bg-1);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="form-label" style="margin:0;white-space:nowrap">Label</span>
+    <input type="text" id="label-input" value="bloodstain" list="label-suggestions"
+      style="background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;width:180px;transition:all 0.15s"
+      onfocus="this.style.borderColor='#FF2D2D';this.style.boxShadow='0 0 0 3px rgba(255,45,45,0.12)'"
+      onblur="this.style.borderColor='rgba(255,255,255,0.06)';this.style.boxShadow='none'">
+    <datalist id="label-suggestions">
+      <option value="bloodstain"><option value="weapon"><option value="footprint">
+      <option value="shell_casing"><option value="knife"><option value="handgun">
+      <option value="evidence_marker"><option value="body"><option value="person">
+      <option value="vehicle"><option value="fingerprint">
+    </datalist>
+  </div>
+  <div style="width:1px;height:28px;background:rgba(255,255,255,0.06)"></div>
+  <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:rgba(240,240,242,0.28);font-family:'DM Mono',monospace">
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border:2px solid #FF2D2D;border-radius:2px;display:inline-block"></span>AI</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border:2px solid #00FF88;border-radius:2px;display:inline-block"></span>Manual</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border:2px solid #FFB800;border-radius:2px;display:inline-block"></span>Selected</span>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <span id="status" style="font-size:12px;color:rgba(240,240,242,0.28);display:flex;align-items:center;font-family:'DM Mono',monospace"></span>
+    <button class="btn btn-danger" onclick="deleteSelected()" style="padding:7px 14px;font-size:12px">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Delete
+    </button>
+    <button class="btn btn-success" onclick="saveAnnotations()" style="padding:7px 14px;font-size:12px">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+      Save All
+    </button>
+  </div>
 </div>
 
-<div class="mb-2">
-  <small class="text-muted">
-    🔴 Red = AI detected &nbsp;|&nbsp; 🟢 Green = Manual &nbsp;|&nbsp; 🟡 Yellow = Selected<br>
-    Click box to select. Drag on empty area to draw new box.
-  </small>
+<div style="display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start">
+  <div style="background:var(--bg-1);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative">
+    <!-- FIX: pass evidence.id via data attribute to avoid Jinja syntax inside <script> -->
+    <canvas id="mainCanvas" data-evidence-id="{{ evidence.id }}" style="display:block;cursor:crosshair;max-width:100%;width:100%"></canvas>
+    <div id="loading-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#111114">
+      <div style="text-align:center">
+        <div style="width:32px;height:32px;border:2px solid rgba(255,255,255,0.06);border-top-color:#FF2D2D;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px"></div>
+        <div style="font-size:12px;color:rgba(240,240,242,0.28);font-family:'DM Mono',monospace">Loading image...</div>
+      </div>
+    </div>
+  </div>
+  <div style="background:var(--bg-1);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:600px;overflow-y:auto">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:600">Annotations</span>
+      <span id="ann-count" class="badge badge-gray">0</span>
+    </div>
+    <div id="ann-list" style="padding:10px"></div>
+  </div>
 </div>
 
-<canvas id="mainCanvas" style="border:2px solid #444; cursor:crosshair; max-width:100%;"></canvas>
+<style>
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
 
-<div id="ann-list" class="mt-3"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const EVIDENCE_ID = {{ evidence.id }};
-let canvas = document.getElementById('mainCanvas');
-let ctx = canvas.getContext('2d');
-let img = new Image();
-let annotations = [];
-let selectedIndex = -1;
-let isDrawing = false;
-let drawStart = null;
+// FIX: read evidence ID from data attribute instead of inline Jinja {{ }} in JS
+var canvas = document.getElementById('mainCanvas');
+var EVIDENCE_ID = canvas.dataset.evidenceId;
+
+var ctx = canvas.getContext('2d');
+var img = new Image();
+var annotations = [];
+var selectedIndex = -1;
+var isDrawing = false;
+var drawStart = null;
 
 img.onload = function() {
+  document.getElementById('loading-overlay').style.display = 'none';
   canvas.width = Math.min(img.width, 900);
-  let scale = canvas.width / img.width;
+  var scale = canvas.width / img.width;
   canvas.height = img.height * scale;
   loadAnnotations();
 };
-img.src = `/cases/evidence/${EVIDENCE_ID}/image`;
+img.src = '/cases/evidence/' + EVIDENCE_ID + '/image';
 
 function loadAnnotations() {
-  fetch(`/cases/evidence/${EVIDENCE_ID}/annotations`)
-    .then(r => r.json())
-    .then(data => {
+  fetch('/cases/evidence/' + EVIDENCE_ID + '/annotations')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
       annotations = data.annotations || [];
-      document.getElementById('status').textContent = `${annotations.length} annotations loaded`;
+      setStatus(annotations.length + ' annotations loaded');
       redraw(); updateList();
     });
+}
+
+function setStatus(msg, isError) {
+  var s = document.getElementById('status');
+  s.textContent = msg;
+  s.style.color = isError ? '#FF2D2D' : '#00FF88';
+  setTimeout(function() { s.style.color = 'rgba(240,240,242,0.28)'; }, 3000);
 }
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  let sx = canvas.width / img.width, sy = canvas.height / img.height;
-  annotations.forEach((ann, i) => {
-    let x = ann.x*img.width*sx, y = ann.y*img.height*sy;
-    let w = ann.width*img.width*sx, h = ann.height*img.height*sy;
-    let color = i===selectedIndex ? '#FFD700' : ann.source==='auto' ? '#FF4136' : '#2ECC40';
-    ctx.strokeStyle = color; ctx.lineWidth = i===selectedIndex ? 3 : 2;
+  var sx = canvas.width / img.width;
+  var sy = canvas.height / img.height;
+  annotations.forEach(function(ann, i) {
+    var x = ann.x * img.width * sx, y = ann.y * img.height * sy;
+    var w = ann.width * img.width * sx, h = ann.height * img.height * sy;
+    var isSel = i === selectedIndex;
+    var color = isSel ? '#FFB800' : ann.source === 'auto' ? '#FF2D2D' : '#00FF88';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isSel ? 3 : 2;
+    if (isSel) { ctx.shadowColor = color; ctx.shadowBlur = 8; }
     ctx.strokeRect(x, y, w, h);
-    let label = ann.label + (ann.confidence ? ` ${Math.round(ann.confidence*100)}%` : '');
-    ctx.font = 'bold 13px Arial';
-    let tw = ctx.measureText(label).width;
-    ctx.fillStyle = color; ctx.fillRect(x, y-20, tw+6, 20);
-    ctx.fillStyle = '#000'; ctx.fillText(label, x+3, y-5);
+    ctx.shadowBlur = 0;
+    var label = ann.label + (ann.confidence ? ' ' + Math.round(ann.confidence * 100) + '%' : '');
+    ctx.font = 'bold 12px monospace';
+    var tw = ctx.measureText(label).width;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(x, y > 20 ? y - 20 : y, tw + 8, 18);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#000';
+    ctx.fillText(label, x + 4, y > 20 ? y - 6 : y + 13);
   });
 }
 
 function updateList() {
-  let list = document.getElementById('ann-list');
-  list.innerHTML = `<h6>Annotations (${annotations.length})</h6>`;
-  annotations.forEach((ann, i) => {
-    let d = document.createElement('div');
-    d.className = 'badge me-1 mb-1 p-2';
-    d.style.background = i===selectedIndex ? '#FFD700' : ann.source==='auto' ? '#dc3545' : '#28a745';
+  var list = document.getElementById('ann-list');
+  document.getElementById('ann-count').textContent = annotations.length;
+  if (!annotations.length) {
+    list.innerHTML = '<div style="padding:12px;font-size:12px;color:rgba(240,240,242,0.28);text-align:center;font-family:DM Mono,monospace">No annotations yet.<br>Drag on image to draw.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  annotations.forEach(function(ann, i) {
+    var d = document.createElement('div');
+    var isSel = i === selectedIndex;
+    d.style.display = 'flex';
+    d.style.alignItems = 'center';
+    d.style.gap = '8px';
+    d.style.padding = '8px 10px';
+    d.style.borderRadius = '7px';
     d.style.cursor = 'pointer';
-    d.textContent = `${i+1}. ${ann.label}${ann.confidence ? ' '+Math.round(ann.confidence*100)+'%' : ''}`;
-    d.onclick = () => { selectedIndex = i; redraw(); updateList(); };
+    d.style.marginBottom = '4px';
+    d.style.border = '1px solid';
+    d.style.transition = 'all 0.1s';
+    d.style.background = isSel ? 'rgba(255,184,0,0.08)' : 'transparent';
+    d.style.borderColor = isSel ? 'rgba(255,184,0,0.3)' : 'rgba(255,255,255,0.06)';
+    var dot = ann.source === 'auto' ? '#FF2D2D' : '#00FF88';
+    var dotColor = isSel ? '#FFB800' : dot;
+    var textColor = isSel ? '#FFB800' : 'rgba(240,240,242,0.55)';
+    var confHtml = ann.confidence ? '<span style="font-size:10px;color:rgba(240,240,242,0.28);font-family:DM Mono,monospace">' + Math.round(ann.confidence * 100) + '%</span>' : '';
+    d.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';flex-shrink:0"></span>'
+      + '<span style="font-size:12px;color:' + textColor + ';font-family:DM Mono,monospace;flex:1">' + ann.label + '</span>'
+      + confHtml;
+    d.onclick = function() { selectedIndex = i; redraw(); updateList(); };
     list.appendChild(d);
   });
 }
 
-canvas.addEventListener('mousedown', e => {
-  let r = canvas.getBoundingClientRect();
-  let mx = e.clientX-r.left, my = e.clientY-r.top;
-  let sx = canvas.width/img.width, sy = canvas.height/img.height;
-  let clicked = -1;
-  for (let i=annotations.length-1; i>=0; i--) {
-    let a=annotations[i], bx=a.x*img.width*sx, by=a.y*img.height*sy;
-    if (mx>=bx && mx<=bx+a.width*img.width*sx && my>=by && my<=by+a.height*img.height*sy) { clicked=i; break; }
+canvas.addEventListener('mousedown', function(e) {
+  var r = canvas.getBoundingClientRect();
+  var scaleX = canvas.width / r.width;
+  var scaleY = canvas.height / r.height;
+  var mx = (e.clientX - r.left) * scaleX, my = (e.clientY - r.top) * scaleY;
+  var sx = canvas.width / img.width, sy = canvas.height / img.height;
+  var clicked = -1;
+  for (var i = annotations.length - 1; i >= 0; i--) {
+    var a = annotations[i], bx = a.x * img.width * sx, by = a.y * img.height * sy;
+    var bw = a.width * img.width * sx, bh = a.height * img.height * sy;
+    if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) { clicked = i; break; }
   }
-  if (clicked>=0) { selectedIndex=clicked; redraw(); updateList(); }
-  else { selectedIndex=-1; isDrawing=true; drawStart={x:mx,y:my}; }
+  if (clicked >= 0) { selectedIndex = clicked; redraw(); updateList(); }
+  else { selectedIndex = -1; isDrawing = true; drawStart = { x: mx, y: my }; redraw(); updateList(); }
 });
 
-canvas.addEventListener('mousemove', e => {
+canvas.addEventListener('mousemove', function(e) {
   if (!isDrawing) return;
-  let r = canvas.getBoundingClientRect();
-  let mx = e.clientX-r.left, my = e.clientY-r.top;
+  var r = canvas.getBoundingClientRect();
+  var scaleX = canvas.width / r.width, scaleY = canvas.height / r.height;
+  var mx = (e.clientX - r.left) * scaleX, my = (e.clientY - r.top) * scaleY;
   redraw();
-  ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.setLineDash([5,3]);
-  ctx.strokeRect(drawStart.x, drawStart.y, mx-drawStart.x, my-drawStart.y);
+  ctx.strokeStyle = '#FFB800'; ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
+  ctx.strokeRect(drawStart.x, drawStart.y, mx - drawStart.x, my - drawStart.y);
   ctx.setLineDash([]);
 });
 
-canvas.addEventListener('mouseup', e => {
+canvas.addEventListener('mouseup', function(e) {
   if (!isDrawing) return;
   isDrawing = false;
-  let r = canvas.getBoundingClientRect();
-  let mx = e.clientX-r.left, my = e.clientY-r.top;
-  let w = mx-drawStart.x, h = my-drawStart.y;
-  if (Math.abs(w)<10 || Math.abs(h)<10) return;
-  let sx = canvas.width/img.width, sy = canvas.height/img.height;
+  var r = canvas.getBoundingClientRect();
+  var scaleX = canvas.width / r.width, scaleY = canvas.height / r.height;
+  var mx = (e.clientX - r.left) * scaleX, my = (e.clientY - r.top) * scaleY;
+  var w = mx - drawStart.x, h = my - drawStart.y;
+  if (Math.abs(w) < 10 || Math.abs(h) < 10) return;
+  var sx = canvas.width / img.width, sy = canvas.height / img.height;
   annotations.push({
     label: document.getElementById('label-input').value || 'unknown',
-    x: Math.min(drawStart.x,mx)/(img.width*sx),
-    y: Math.min(drawStart.y,my)/(img.height*sy),
-    width: Math.abs(w)/(img.width*sx),
-    height: Math.abs(h)/(img.height*sy),
-    confidence: null, source: 'manual'
+    x: Math.min(drawStart.x, mx) / (img.width * sx),
+    y: Math.min(drawStart.y, my) / (img.height * sy),
+    width: Math.abs(w) / (img.width * sx),
+    height: Math.abs(h) / (img.height * sy),
+    confidence: null,
+    source: 'manual'
   });
+  selectedIndex = annotations.length - 1;
   redraw(); updateList();
 });
 
 function deleteSelected() {
-  if (selectedIndex<0) { alert('Click on a box to select it first.'); return; }
+  if (selectedIndex < 0) { setStatus('Select a box first', true); return; }
   annotations.splice(selectedIndex, 1);
-  selectedIndex=-1; redraw(); updateList();
+  selectedIndex = -1; redraw(); updateList();
 }
 
 function saveAnnotations() {
-  fetch(`/cases/evidence/${EVIDENCE_ID}/annotations`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({annotations})
-  }).then(r=>r.json()).then(data => {
-    document.getElementById('status').textContent = data.success
-      ? `✅ Saved ${data.saved} annotations!`
-      : `❌ Error: ${data.error}`;
+  setStatus('Saving...');
+  fetch('/cases/evidence/' + EVIDENCE_ID + '/annotations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ annotations: annotations })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) setStatus('Saved ' + data.saved + ' annotations');
+    else setStatus('Save failed', true);
   });
 }
 </script>
