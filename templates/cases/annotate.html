@@ -48,8 +48,7 @@
 
 <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start">
   <div style="background:var(--bg-1);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative">
-    <!-- FIX: pass evidence.id via data attribute to avoid Jinja syntax inside <script> -->
-    <canvas id="mainCanvas" data-evidence-id="{{ evidence.id }}" style="display:block;cursor:crosshair;max-width:100%;width:100%"></canvas>
+    <canvas id="mainCanvas" data-eid="{{ evidence.id }}" style="display:block;cursor:crosshair;max-width:100%;width:100%"></canvas>
     <div id="loading-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#111114">
       <div style="text-align:center">
         <div style="width:32px;height:32px;border:2px solid rgba(255,255,255,0.06);border-top-color:#FF2D2D;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px"></div>
@@ -66,18 +65,13 @@
   </div>
 </div>
 
-<style>
-  @keyframes spin{to{transform:rotate(360deg)}}
-</style>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 {% endblock %}
-
 {% block scripts %}
 <script>
-// FIX: read evidence ID from data attribute instead of inline Jinja {{ }} in JS
 var canvas = document.getElementById('mainCanvas');
-var EVIDENCE_ID = canvas.dataset.evidenceId;
-
+var EVIDENCE_ID = canvas.getAttribute('data-eid');
 var ctx = canvas.getContext('2d');
 var img = new Image();
 var annotations = [];
@@ -88,8 +82,7 @@ var drawStart = null;
 img.onload = function() {
   document.getElementById('loading-overlay').style.display = 'none';
   canvas.width = Math.min(img.width, 900);
-  var scale = canvas.width / img.width;
-  canvas.height = img.height * scale;
+  canvas.height = img.height * (canvas.width / img.width);
   loadAnnotations();
 };
 img.src = '/cases/evidence/' + EVIDENCE_ID + '/image';
@@ -117,8 +110,8 @@ function redraw() {
   var sx = canvas.width / img.width;
   var sy = canvas.height / img.height;
   annotations.forEach(function(ann, i) {
-    var x = ann.x * img.width * sx, y = ann.y * img.height * sy;
-    var w = ann.width * img.width * sx, h = ann.height * img.height * sy;
+    var x = ann.x*img.width*sx, y = ann.y*img.height*sy;
+    var w = ann.width*img.width*sx, h = ann.height*img.height*sy;
     var isSel = i === selectedIndex;
     var color = isSel ? '#FFB800' : ann.source === 'auto' ? '#FF2D2D' : '#00FF88';
     ctx.strokeStyle = color;
@@ -126,15 +119,15 @@ function redraw() {
     if (isSel) { ctx.shadowColor = color; ctx.shadowBlur = 8; }
     ctx.strokeRect(x, y, w, h);
     ctx.shadowBlur = 0;
-    var label = ann.label + (ann.confidence ? ' ' + Math.round(ann.confidence * 100) + '%' : '');
+    var label = ann.label + (ann.confidence ? ' ' + Math.round(ann.confidence*100) + '%' : '');
     ctx.font = 'bold 12px monospace';
     var tw = ctx.measureText(label).width;
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.9;
-    ctx.fillRect(x, y > 20 ? y - 20 : y, tw + 8, 18);
+    ctx.fillRect(x, y > 20 ? y-20 : y, tw+8, 18);
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#000';
-    ctx.fillText(label, x + 4, y > 20 ? y - 6 : y + 13);
+    ctx.fillText(label, x+4, y > 20 ? y-6 : y+13);
   });
 }
 
@@ -142,7 +135,7 @@ function updateList() {
   var list = document.getElementById('ann-list');
   document.getElementById('ann-count').textContent = annotations.length;
   if (!annotations.length) {
-    list.innerHTML = '<div style="padding:12px;font-size:12px;color:rgba(240,240,242,0.28);text-align:center;font-family:DM Mono,monospace">No annotations yet.<br>Drag on image to draw.</div>';
+    list.innerHTML = '<div style="padding:12px;font-size:12px;color:rgba(240,240,242,0.28);text-align:center">No annotations yet.<br>Drag on image to draw.</div>';
     return;
   }
   list.innerHTML = '';
@@ -161,11 +154,9 @@ function updateList() {
     d.style.background = isSel ? 'rgba(255,184,0,0.08)' : 'transparent';
     d.style.borderColor = isSel ? 'rgba(255,184,0,0.3)' : 'rgba(255,255,255,0.06)';
     var dot = ann.source === 'auto' ? '#FF2D2D' : '#00FF88';
-    var dotColor = isSel ? '#FFB800' : dot;
-    var textColor = isSel ? '#FFB800' : 'rgba(240,240,242,0.55)';
-    var confHtml = ann.confidence ? '<span style="font-size:10px;color:rgba(240,240,242,0.28);font-family:DM Mono,monospace">' + Math.round(ann.confidence * 100) + '%</span>' : '';
-    d.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';flex-shrink:0"></span>'
-      + '<span style="font-size:12px;color:' + textColor + ';font-family:DM Mono,monospace;flex:1">' + ann.label + '</span>'
+    var confHtml = ann.confidence ? '<span style="font-size:10px;color:rgba(240,240,242,0.28)">' + Math.round(ann.confidence*100) + '%</span>' : '';
+    d.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + (isSel?'#FFB800':dot) + ';flex-shrink:0"></span>'
+      + '<span style="font-size:12px;color:' + (isSel?'#FFB800':'rgba(240,240,242,0.55)') + ';flex:1">' + ann.label + '</span>'
       + confHtml;
     d.onclick = function() { selectedIndex = i; redraw(); updateList(); };
     list.appendChild(d);
@@ -174,28 +165,28 @@ function updateList() {
 
 canvas.addEventListener('mousedown', function(e) {
   var r = canvas.getBoundingClientRect();
-  var scaleX = canvas.width / r.width;
-  var scaleY = canvas.height / r.height;
-  var mx = (e.clientX - r.left) * scaleX, my = (e.clientY - r.top) * scaleY;
-  var sx = canvas.width / img.width, sy = canvas.height / img.height;
+  var mx = (e.clientX-r.left)*(canvas.width/r.width);
+  var my = (e.clientY-r.top)*(canvas.height/r.height);
+  var sx = canvas.width/img.width, sy = canvas.height/img.height;
   var clicked = -1;
-  for (var i = annotations.length - 1; i >= 0; i--) {
-    var a = annotations[i], bx = a.x * img.width * sx, by = a.y * img.height * sy;
-    var bw = a.width * img.width * sx, bh = a.height * img.height * sy;
-    if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) { clicked = i; break; }
+  for (var i = annotations.length-1; i >= 0; i--) {
+    var a = annotations[i];
+    var bx = a.x*img.width*sx, by = a.y*img.height*sy;
+    var bw = a.width*img.width*sx, bh = a.height*img.height*sy;
+    if (mx>=bx && mx<=bx+bw && my>=by && my<=by+bh) { clicked=i; break; }
   }
-  if (clicked >= 0) { selectedIndex = clicked; redraw(); updateList(); }
-  else { selectedIndex = -1; isDrawing = true; drawStart = { x: mx, y: my }; redraw(); updateList(); }
+  if (clicked >= 0) { selectedIndex=clicked; redraw(); updateList(); }
+  else { selectedIndex=-1; isDrawing=true; drawStart={x:mx,y:my}; redraw(); updateList(); }
 });
 
 canvas.addEventListener('mousemove', function(e) {
   if (!isDrawing) return;
   var r = canvas.getBoundingClientRect();
-  var scaleX = canvas.width / r.width, scaleY = canvas.height / r.height;
-  var mx = (e.clientX - r.left) * scaleX, my = (e.clientY - r.top) * scaleY;
+  var mx = (e.clientX-r.left)*(canvas.width/r.width);
+  var my = (e.clientY-r.top)*(canvas.height/r.height);
   redraw();
-  ctx.strokeStyle = '#FFB800'; ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
-  ctx.strokeRect(drawStart.x, drawStart.y, mx - drawStart.x, my - drawStart.y);
+  ctx.strokeStyle='#FFB800'; ctx.lineWidth=2; ctx.setLineDash([6,3]);
+  ctx.strokeRect(drawStart.x, drawStart.y, mx-drawStart.x, my-drawStart.y);
   ctx.setLineDash([]);
 });
 
@@ -203,36 +194,35 @@ canvas.addEventListener('mouseup', function(e) {
   if (!isDrawing) return;
   isDrawing = false;
   var r = canvas.getBoundingClientRect();
-  var scaleX = canvas.width / r.width, scaleY = canvas.height / r.height;
-  var mx = (e.clientX - r.left) * scaleX, my = (e.clientY - r.top) * scaleY;
-  var w = mx - drawStart.x, h = my - drawStart.y;
-  if (Math.abs(w) < 10 || Math.abs(h) < 10) return;
-  var sx = canvas.width / img.width, sy = canvas.height / img.height;
+  var mx = (e.clientX-r.left)*(canvas.width/r.width);
+  var my = (e.clientY-r.top)*(canvas.height/r.height);
+  var w = mx-drawStart.x, h = my-drawStart.y;
+  if (Math.abs(w)<10 || Math.abs(h)<10) return;
+  var sx = canvas.width/img.width, sy = canvas.height/img.height;
   annotations.push({
     label: document.getElementById('label-input').value || 'unknown',
-    x: Math.min(drawStart.x, mx) / (img.width * sx),
-    y: Math.min(drawStart.y, my) / (img.height * sy),
-    width: Math.abs(w) / (img.width * sx),
-    height: Math.abs(h) / (img.height * sy),
-    confidence: null,
-    source: 'manual'
+    x: Math.min(drawStart.x,mx)/(img.width*sx),
+    y: Math.min(drawStart.y,my)/(img.height*sy),
+    width: Math.abs(w)/(img.width*sx),
+    height: Math.abs(h)/(img.height*sy),
+    confidence: null, source: 'manual'
   });
-  selectedIndex = annotations.length - 1;
+  selectedIndex = annotations.length-1;
   redraw(); updateList();
 });
 
 function deleteSelected() {
-  if (selectedIndex < 0) { setStatus('Select a box first', true); return; }
+  if (selectedIndex<0) { setStatus('Select a box first', true); return; }
   annotations.splice(selectedIndex, 1);
-  selectedIndex = -1; redraw(); updateList();
+  selectedIndex=-1; redraw(); updateList();
 }
 
 function saveAnnotations() {
   setStatus('Saving...');
   fetch('/cases/evidence/' + EVIDENCE_ID + '/annotations', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ annotations: annotations })
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({annotations: annotations})
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.success) setStatus('Saved ' + data.saved + ' annotations');
     else setStatus('Save failed', true);

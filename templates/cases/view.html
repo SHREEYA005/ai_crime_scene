@@ -35,7 +35,6 @@
   </div>
 </div>
 
-<!-- CASE META -->
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
   <div style="background:var(--bg-1);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
     <div class="stat-label">Status</div>
@@ -53,7 +52,7 @@
   </div>
   <div style="background:var(--bg-1);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
     <div class="stat-label">Evidence Files</div>
-    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text)">{{ case.evidence_items|length }}</div>
+    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text)">{{ case.evidence|length }}</div>
   </div>
   <div style="background:var(--bg-1);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
     <div class="stat-label">Created</div>
@@ -61,7 +60,6 @@
   </div>
 </div>
 
-<!-- UPLOAD SECTION -->
 <div class="card" style="margin-bottom:24px">
   <div class="card-title" style="margin-bottom:14px">
     <svg style="width:15px;height:15px;display:inline;margin-right:6px;vertical-align:-2px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -79,20 +77,18 @@
   </form>
 </div>
 
-<!-- EVIDENCE FILES -->
 <div class="card" style="padding:0">
   <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
     <div class="card-title">Evidence Files</div>
-    <span class="badge badge-gray">{{ case.evidence_items|length }}</span>
+    <span class="badge badge-gray">{{ case.evidence|length }}</span>
   </div>
 
-  {% if case.evidence_items %}
+  {% if case.evidence %}
   <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
-    {% for item in case.evidence_items %}
+    {% for item in case.evidence %}
     <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;transition:border-color 0.15s" onmouseover="this.style.borderColor='var(--border-hover)'" onmouseout="this.style.borderColor='var(--border)'">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
         <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
-          <!-- FILE ICON -->
           <div style="width:38px;height:38px;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text-3)" stroke-width="1.8"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           </div>
@@ -111,7 +107,6 @@
             </div>
           </div>
         </div>
-        <!-- ACTIONS -->
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <form method="POST" action="/cases/evidence/{{ item.id }}/detect" style="display:inline">
             <button type="submit" class="btn btn-blue" style="padding:7px 14px;font-size:12px">
@@ -130,15 +125,13 @@
           </form>
         </div>
       </div>
-
-      <!-- DETECTIONS -->
       {% if item.annotations %}
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
         <div style="font-size:11px;color:var(--text-3);margin-bottom:8px;font-family:'DM Mono',monospace;letter-spacing:0.08em">{{ item.annotations|length }} OBJECTS DETECTED</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
           {% for ann in item.annotations %}
           <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--red-dim);border:1px solid var(--border-red);border-radius:20px;font-size:11px;color:var(--red);font-family:'DM Mono',monospace">
-            {{ ann.label }} {{ "%.0f"|format(ann.confidence*100) }}%
+            {{ ann.label }}{% if ann.confidence %} {{ "%.0f"|format(ann.confidence*100) }}%{% endif %}
           </span>
           {% endfor %}
         </div>
