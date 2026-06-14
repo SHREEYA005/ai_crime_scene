@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}3D Viewer · {{ case.case_number }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="page-eyebrow">3D Crime Scene</div>
+  <div class="page-header-row">
+    <div>
+      <h1 class="page-title mono">{{ case.case_number }}</h1>
+      <p class="page-subtitle">Interactive 3D scene — WASD to move, mouse to look</p>
+    </div>
+    <a href="/cases/{{ case.id }}" class="btn btn-ghost">← Back to Case</a>
+  </div>
+</div>
+
+<div style="background:#000;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+  <iframe src="/static/webgl/index.html?case_id={{ case.id }}&t={{ case.case_number }}"
+    style="width:100%;height:78vh;border:none;display:block">
+  </iframe>
+</div>
+
+{% endblock %}

@@ -208,12 +208,19 @@ def delete_evidence(evidence_id):
 @login_required
 def export_scene(case_id):
     case = Case.query.get_or_404(case_id)
-    output_path = os.path.join('exports', f'scene_{case.case_number}.json')
+    output_path = os.path.join(os.getcwd(), 'exports', f'scene_{case.case_number}.json')
     os.makedirs('exports', exist_ok=True)
 
     try:
         from app.detection.scene_builder import build_scene_json
         scene = build_scene_json(case, output_path)
+
+        # Auto-copy to WebGL so viewer shows this case
+        import shutil
+        webgl_path = os.path.join(os.getcwd(), 'app', 'static', 'webgl', 'StreamingAssets', 'scene_data.json')
+        if os.path.exists(os.path.dirname(webgl_path)):
+            shutil.copy2(output_path, webgl_path)
+
         flash(f'Scene exported! {scene["total_objects"]} objects included.', 'success')
     except Exception as e:
         flash(f'Export failed: {str(e)}', 'error')
@@ -261,3 +268,18 @@ def download_pdf(case_id):
         flash('Generate the report first', 'error')
         return redirect(url_for('cases.view_case', case_id=case_id))
     return send_file(path, as_attachment=True)
+
+
+@cases_bp.route('/<int:case_id>/viewer')
+@login_required
+def viewer(case_id):
+    case = Case.query.get_or_404(case_id)
+    return render_template('cases/viewer.html', case=case)
+@cases_bp.route('/<int:case_id>/scene-data')
+@login_required
+def scene_data(case_id):
+    case = Case.query.get_or_404(case_id)
+    path = os.path.join(os.getcwd(), 'exports', f'scene_{case.case_number}.json')
+    if not os.path.exists(path):
+        return jsonify({'error': 'No scene exported yet'}), 404
+    return send_file(path, mimetype='application/json')    

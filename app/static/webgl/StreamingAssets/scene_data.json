@@ -1,0 +1,69 @@
+{
+  "case_id": "CR-2026-9DB4C1",
+  "case_title": "Murder",
+  "room_dimensions": {
+    "width": 6.0,
+    "height": 3.0,
+    "depth": 8.0
+  },
+  "objects": [
+    {
+      "label": "bloodstain",
+      "annotation_id": 8,
+      "confidence": null,
+      "source": "manual",
+      "position": {
+        "x": -0.91,
+        "y": 0.0,
+        "z": 7.75
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "prefab": "Bloodstain_01",
+      "id": 1,
+      "evidence_id": 3
+    },
+    {
+      "label": "bloodstain",
+      "annotation_id": 9,
+      "confidence": null,
+      "source": "manual",
+      "position": {
+        "x": -0.05,
+        "y": 0.0,
+        "z": 7.79
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "prefab": "Bloodstain_01",
+      "id": 2,
+      "evidence_id": 3
+    },
+    {
+      "label": "body",
+      "annotation_id": 10,
+      "confidence": null,
+      "source": "manual",
+      "position": {
+        "x": -0.34,
+        "y": 0.0,
+        "z": 7.2
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "prefab": "EvidenceMarker_Default",
+      "id": 3,
+      "evidence_id": 3
+    }
+  ],
+  "total_objects": 3
+}

@@ -1,78 +1,71 @@
 using UnityEngine;
-using System.IO;
+using System.Collections;
+using UnityEngine.Networking;
 
 public class SceneLoader : MonoBehaviour
 {
-    public GameObject defaultPrefab;
-    public GameObject[] namedPrefabs;
-
     void Start()
     {
-        string path = Path.Combine(Application.streamingAssetsPath, "scene_data.json");
+        StartCoroutine(LoadScene());
+    }
 
-        if (!File.Exists(path))
+    IEnumerator LoadScene()
+    {
+        string url = Application.absoluteURL;
+        string caseId = "1";
+
+        if (url.Contains("case_id="))
         {
-            Debug.LogError("scene_data.json not found in StreamingAssets! Path: " + path);
-            return;
+            int idx = url.IndexOf("case_id=") + 8;
+            int end = url.IndexOf("&", idx);
+            caseId = end > 0 ? url.Substring(idx, end - idx) : url.Substring(idx);
         }
 
-        SceneData data = JsonUtility.FromJson<SceneData>(File.ReadAllText(path));
+        string jsonUrl = "/cases/" + caseId + "/scene-data";
+        Debug.Log("Fetching scene from: " + jsonUrl);
 
+        UnityWebRequest req = UnityWebRequest.Get(jsonUrl);
+        yield return req.SendWebRequest();
+
+        if (req.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogError("Failed to load scene: " + req.error);
+            yield break;
+        }
+
+        SceneData data = JsonUtility.FromJson<SceneData>(req.downloadHandler.text);
         if (data == null || data.objects == null)
         {
-            Debug.LogError("Failed to parse scene JSON");
-            return;
+            Debug.LogError("Failed to parse JSON");
+            yield break;
         }
 
-        Debug.Log("Loading scene: " + data.case_title + " with " + data.objects.Length + " objects");
-
+        Debug.Log("Loaded: " + data.case_title + " with " + data.objects.Length + " objects");
         foreach (var obj in data.objects)
-        {
             SpawnObject(obj);
-        }
     }
 
     void SpawnObject(SceneObject obj)
     {
-        GameObject prefab = FindPrefab(obj.prefab) ?? defaultPrefab;
-        if (prefab == null)
-        {
-            Debug.LogWarning("No prefab for: " + obj.label);
-            return;
-        }
-
         Vector3 pos = new Vector3(obj.position.x, obj.position.y, obj.position.z);
-        Quaternion rot = Quaternion.Euler(obj.rotation.x, obj.rotation.y, obj.rotation.z);
-        GameObject instance = Instantiate(prefab, pos, rot);
+        GameObject instance = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        instance.transform.position = pos;
+        instance.transform.localScale = new Vector3(0.5f, 1.8f, 0.5f);
         instance.name = obj.label + "_" + obj.id;
 
-        // Color by type
-        Renderer rend = instance.GetComponent<Renderer>();
-        if (rend != null)
-        {
-            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            mat.color = obj.label.Contains("person") ? Color.red : Color.yellow;
-            rend.material = mat;
-        }
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (obj.label == "person") mat.color = Color.red;
+        else if (obj.label == "bloodstain") mat.color = new Color(0.6f, 0f, 0f);
+        else if (obj.label == "body") mat.color = new Color(0.2f, 0.2f, 0.8f);
+        else if (obj.label == "weapon" || obj.label == "knife" || obj.label == "handgun") mat.color = Color.yellow;
+        else mat.color = Color.white;
+        instance.GetComponent<Renderer>().material = mat;
 
-        AddLabel(instance, obj.label, obj.confidence);
-    }
-
-    GameObject FindPrefab(string name)
-    {
-        if (namedPrefabs == null) return null;
-        foreach (var p in namedPrefabs)
-            if (p != null && p.name == name) return p;
-        return null;
-    }
-
-    void AddLabel(GameObject obj, string label, float confidence)
-    {
-        GameObject labelObj = new GameObject("Label_" + label);
-        labelObj.transform.SetParent(obj.transform);
+        GameObject labelObj = new GameObject("Label");
+        labelObj.transform.SetParent(instance.transform);
         labelObj.transform.localPosition = new Vector3(0, 2f, 0);
         TextMesh tm = labelObj.AddComponent<TextMesh>();
-        tm.text = confidence > 0 ? label + "\n" + Mathf.Round(confidence * 100) + "%" : label;
+        tm.text = obj.confidence > 0 ? obj.label + "\n" + Mathf.Round(obj.confidence * 100) + "%" : obj.label;
         tm.fontSize = 24;
         tm.color = Color.white;
         tm.anchor = TextAnchor.MiddleCenter;
@@ -93,7 +86,6 @@ public class SceneObject
 {
     public int id;
     public string label;
-    public string prefab;
     public float confidence;
     public Vec3 position;
     public Vec3 rotation;
